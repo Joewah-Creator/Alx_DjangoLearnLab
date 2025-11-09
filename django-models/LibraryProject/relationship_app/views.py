@@ -98,3 +98,61 @@ def member_view(request):
     """
     return render(request, 'relationship_app/member_view.html', {'user': request.user})
 
+# Alx_DjangoLearnLab/django-models/relationship_app/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import HttpResponse
+from django.contrib.auth.decorators import permission_required, login_required
+from .models import Book, Author
+
+# --- Add Book ---
+@permission_required('relationship_app.can_add_book', raise_exception=True)
+def add_book(request):
+    """
+    Minimal add-book view: GET renders simple form, POST creates Book.
+    Expects: POST 'title' and 'author_id'
+    """
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        author_id = request.POST.get('author_id')
+        if not title or not author_id:
+            return HttpResponse("Missing title or author_id", status=400)
+        author = get_object_or_404(Author, pk=author_id)
+        Book.objects.create(title=title, author=author)
+        return redirect('list_books')
+    # simple form for GET
+    authors = Author.objects.all()
+    return render(request, 'relationship_app/add_book.html', {'authors': authors})
+
+
+# --- Edit Book ---
+@permission_required('relationship_app.can_change_book', raise_exception=True)
+def edit_book(request, pk):
+    """
+    Minimal edit-book view: GET renders form, POST updates book.
+    """
+    book = get_object_or_404(Book, pk=pk)
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        author_id = request.POST.get('author_id')
+        if not title or not author_id:
+            return HttpResponse("Missing title or author_id", status=400)
+        author = get_object_or_404(Author, pk=author_id)
+        book.title = title
+        book.author = author
+        book.save()
+        return redirect('list_books')
+    authors = Author.objects.all()
+    return render(request, 'relationship_app/edit_book.html', {'book': book, 'authors': authors})
+
+
+# --- Delete Book ---
+@permission_required('relationship_app.can_delete_book', raise_exception=True)
+def delete_book(request, pk):
+    """
+    Minimal delete-book view: POST deletes and redirects. GET shows confirmation.
+    """
+    book = get_object_or_404(Book, pk=pk)
+    if request.method == 'POST':
+        book.delete()
+        return redirect('list_books')
+    return render(request, 'relationship_app/delete_book.html', {'book': book})
