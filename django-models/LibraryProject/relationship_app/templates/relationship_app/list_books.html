@@ -8,7 +8,9 @@
     <h1>Books Available:</h1>
     <ul>
         {% for book in books %}
-        <li>{{ book.title }} by {{ book.author.name }}</li>
+        <li>{{ book.title }}{% if book.author %} by {{ book.author.name }}{% endif %}</li>
+        {% empty %}
+        <li>No books found.</li>
         {% endfor %}
     </ul>
 </body>
