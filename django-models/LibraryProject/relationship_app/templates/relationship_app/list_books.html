@@ -1,13 +1,14 @@
+<!-- relationship_app/templates/relationship_app/list_books.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head><meta charset="utf-8"><title>List of Books</title></head>
 <body>
-  <h1>Books Available:</h1>
+  <h1>Books Available</h1>
   <ul>
     {% for book in books %}
       <li>{{ book.title }}{% if book.author %} by {{ book.author.name }}{% endif %}</li>
     {% empty %}
-      <li>No books found.</li>
+      <li>No books available.</li>
     {% endfor %}
   </ul>
 </body>
