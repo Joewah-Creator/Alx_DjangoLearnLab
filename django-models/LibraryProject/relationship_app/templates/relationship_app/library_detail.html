@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Library Detail</title>
-</head>
+<head><meta charset="utf-8"><title>Library Detail</title></head>
 <body>
-    <h1>Library: {{ library.name }}</h1>
-    <h2>Books in Library:</h2>
-    <ul>
-        {% for book in books %}
-        <li>{{ book.title }}{% if book.author %} by {{ book.author.name }}{% endif %}</li>
-        {% empty %}
-        <li>No books in this library.</li>
-        {% endfor %}
-    </ul>
+  <h1>Library: {{ library.name }}</h1>
+  <h2>Books in Library:</h2>
+  <ul>
+    {% for book in library.books.all %}
+      <li>{{ book.title }}{% if book.author %} by {{ book.author.name }}{% endif %}
+         {% if book.publication_year %} (Published {{ book.publication_year }}){% endif %}
+      </li>
+    {% empty %}
+      <li>No books in this library.</li>
+    {% endfor %}
+  </ul>
 </body>
 </html>
+
+
 
 
 
