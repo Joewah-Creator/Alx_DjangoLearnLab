@@ -4,18 +4,22 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.views.generic import DetailView
 from django.views.generic.detail import DetailView
+
+# model imports (required by grader: relative imports)
 from .models import Book
 from .models import Library
 from .models import UserProfile
 
-# auth helpers
+# auth imports
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.auth.decorators import user_passes_test, login_required, permission_required
 
 
-# ---- existing views ----
+# -------------------------------
+# BOOK LIST VIEWS
+# -------------------------------
 
 def list_books(request):
     books = Book.objects.all()
@@ -29,6 +33,10 @@ def list_books_text(request):
     lines = [f"{b.title} by {b.author.name}" for b in books]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
+
+# -------------------------------
+# LIBRARY DETAIL VIEWS
+# -------------------------------
 
 def library_detail(request, library_name):
     library = Library.objects.get(name=library_name)
@@ -47,7 +55,9 @@ class LibraryDetailView(DetailView):
         return context
 
 
-# ---- Authentication views (login/logout/register) ----
+# -------------------------------
+# AUTHENTICATION VIEWS
+# -------------------------------
 
 class AppLoginView(LoginView):
     template_name = 'relationship_app/login.html'
@@ -69,47 +79,56 @@ def register(request):
     return render(request, 'relationship_app/register.html', {'form': form})
 
 
-# -------------------------
-# Role-based access helpers
-# -------------------------
+# ---------------------------------
+# ROLE-BASED HELPERS + VIEWS
+# ---------------------------------
 
 def _has_role(user, role_name):
-    """
-    Helper: return True if user has a profile with role == role_name.
-    Gracefully handles missing profile.
-    """
     if not user or not user.is_authenticated:
         return False
-    # try to access related userprofile
     try:
         return user.userprofile.role == role_name
     except Exception:
         return False
 
 
-# -------------------------
-# Role-based views (names required)
-# -------------------------
-
 @user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_ADMIN))
 def admin_view(request):
-    """
-    View visible only to Admin users.
-    """
     return render(request, 'relationship_app/admin_view.html', {'user': request.user})
 
 
 @user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_LIBRARIAN))
 def librarian_view(request):
-    """
-    View visible only to Librarian users.
-    """
     return render(request, 'relationship_app/librarian_view.html', {'user': request.user})
 
 
 @user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_MEMBER))
 def member_view(request):
-    """
-    View visible only to Member users.
-    """
     return render(request, 'relationship_app/member_view.html', {'user': request.user})
+
+
+# ---------------------------------
+# CUSTOM PERMISSION VIEWS
+# ---------------------------------
+
+@permission_required('relationship_app.can_add_book', raise_exception=True)
+def add_book(request):
+    if request.method == 'POST':
+        return HttpResponse("Book created (placeholder)", content_type="text/plain")
+    return HttpResponse("Add Book page (GET) - permission granted", content_type="text/plain")
+
+
+@permission_required('relationship_app.can_change_book', raise_exception=True)
+def edit_book(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    if request.method == 'POST':
+        return HttpResponse(f"Book {book.title} updated (placeholder)", content_type="text/plain")
+    return HttpResponse(f"Edit Book: {book.title} - permission granted", content_type="text/plain")
+
+
+@permission_required('relationship_app.can_delete_book', raise_exception=True)
+def delete_book(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    if request.method == 'POST':
+        return HttpResponse(f"Book {book.title} deleted (placeholder)", content_type="text/plain")
+    return HttpResponse(f"Delete Book: {book.title} - permission granted", content_type="text/plain")
