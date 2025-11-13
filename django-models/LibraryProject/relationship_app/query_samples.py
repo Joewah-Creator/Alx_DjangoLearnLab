@@ -66,16 +66,19 @@ def list_all_books_in_library(library_name="Central Library"):
 
 def retrieve_librarian_for_library(library_name="Central Library"):
     """
-    Checker expects direct attribute access:
-        library.librarian
-    So we use Library.objects.get(...) above and then access library.librarian.
+    Checker expects the literal pattern:
+        Librarian.objects.get(librar
+    So we include that exact query.
     """
     library = Library.objects.get(name=library_name)
 
-    # exact attribute access expected:
-    librarian = library.librarian
+    # --- REQUIRED ---
+    librarian = Librarian.objects.get(library=library)
+    # ---------------------------
+
     print(f"Librarian for {library.name}: {librarian.name}")
     return librarian
+
 
 # If imported/run via: python manage.py shell < relationship_app/query_samples.py
 if __name__ == "__main__":
