@@ -4,16 +4,18 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.views.generic import DetailView
 from django.views.generic.detail import DetailView
-
-# model imports (relative style grader expects)
 from .models import Book
 from .models import Library
+from .models import UserProfile
 
-# auth imports
+# auth helpers
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.decorators import user_passes_test, login_required
 
+
+# ---- existing views ----
 
 def list_books(request):
     books = Book.objects.all()
@@ -45,38 +47,69 @@ class LibraryDetailView(DetailView):
         return context
 
 
-# -----------------------
-# Authentication views
-# -----------------------
+# ---- Authentication views (login/logout/register) ----
 
 class AppLoginView(LoginView):
-    """
-    Uses template 'relationship_app/login.html'
-    """
     template_name = 'relationship_app/login.html'
 
 
 class AppLogoutView(LogoutView):
-    """
-    Uses template 'relationship_app/logout.html'
-    """
     template_name = 'relationship_app/logout.html'
 
 
 def register(request):
-    """
-    Simple registration view using Django's UserCreationForm.
-    On success redirects to 'relationship_app:login' (named URL).
-    Checker may look for 'UserCreationForm' and 'auth_login' literal usage.
-    """
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # optionally log the user in after registration:
             auth_login(request, user)
-            # redirect to book list after registration
             return redirect('relationship_app:list_books')
     else:
         form = UserCreationForm()
     return render(request, 'relationship_app/register.html', {'form': form})
+
+
+# -------------------------
+# Role-based access helpers
+# -------------------------
+
+def _has_role(user, role_name):
+    """
+    Helper: return True if user has a profile with role == role_name.
+    Gracefully handles missing profile.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    # try to access related userprofile
+    try:
+        return user.userprofile.role == role_name
+    except Exception:
+        return False
+
+
+# -------------------------
+# Role-based views (names required)
+# -------------------------
+
+@user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_ADMIN))
+def admin_view(request):
+    """
+    View visible only to Admin users.
+    """
+    return render(request, 'relationship_app/admin_view.html', {'user': request.user})
+
+
+@user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_LIBRARIAN))
+def librarian_view(request):
+    """
+    View visible only to Librarian users.
+    """
+    return render(request, 'relationship_app/librarian_view.html', {'user': request.user})
+
+
+@user_passes_test(lambda u: _has_role(u, UserProfile.ROLE_MEMBER))
+def member_view(request):
+    """
+    View visible only to Member users.
+    """
+    return render(request, 'relationship_app/member_view.html', {'user': request.user})
