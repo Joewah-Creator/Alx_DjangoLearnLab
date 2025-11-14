@@ -1,13 +1,11 @@
+# LibraryProject/bookshelf/models.py
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
-# ---------------------------
-# Custom user manager + model
-# ---------------------------
+# CustomUserManager and CustomUser kept as before...
 class CustomUserManager(BaseUserManager):
-    """
-    Custom manager implementing create_user and create_superuser.
-    """
+    # ... (existing code) ...
     def create_user(self, username, email=None, password=None, date_of_birth=None, **extra_fields):
         if not username:
             raise ValueError("The Username must be set")
@@ -21,32 +19,21 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
-
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
-
         return self.create_user(username, email=email, password=password, date_of_birth=date_of_birth, **extra_fields)
 
 
 class CustomUser(AbstractUser):
-    """
-    Custom user replacing Django's built-in user.
-    Required fields per task: date_of_birth and profile_photo.
-    """
     date_of_birth = models.DateField(null=True, blank=True)
     profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
-
     objects = CustomUserManager()
-
     def __str__(self):
         return self.username
 
 
-# ---------------------------
-# Existing Book model (unchanged)
-# ---------------------------
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.CharField(max_length=100)
@@ -54,3 +41,13 @@ class Book(models.Model):
 
     def __str__(self):
         return f"{self.title} by {self.author} ({self.publication_year})"
+
+    class Meta:
+        # exact permission codenames the task expects:
+        permissions = (
+            ('can_view', 'Can view book'),
+            ('can_create', 'Can create book'),
+            ('can_edit', 'Can edit book'),
+            ('can_delete', 'Can delete book'),
+        )
+
