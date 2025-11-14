@@ -1,78 +1,56 @@
-# django-models/relationship_app/models.py
-
 from django.db import models
-from django.conf import settings
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
-# Use get_user_model for the signal sender
-UserModel = get_user_model()
+# ---------------------------
+# Custom user manager + model
+# ---------------------------
+class CustomUserManager(BaseUserManager):
+    """
+    Custom manager implementing create_user and create_superuser.
+    """
+    def create_user(self, username, email=None, password=None, date_of_birth=None, **extra_fields):
+        if not username:
+            raise ValueError("The Username must be set")
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, date_of_birth=date_of_birth, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email=None, password=None, date_of_birth=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(username, email=email, password=password, date_of_birth=date_of_birth, **extra_fields)
 
 
-class Author(models.Model):
-    name = models.CharField(max_length=255)
+class CustomUser(AbstractUser):
+    """
+    Custom user replacing Django's built-in user.
+    Required fields per task: date_of_birth and profile_photo.
+    """
+    date_of_birth = models.DateField(null=True, blank=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+
+    objects = CustomUserManager()
 
     def __str__(self):
-        return self.name
+        return self.username
 
 
+# ---------------------------
+# Existing Book model (unchanged)
+# ---------------------------
 class Book(models.Model):
-    title = models.CharField(max_length=255)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
+    title = models.CharField(max_length=200)
+    author = models.CharField(max_length=100)
+    publication_year = models.IntegerField()
 
     def __str__(self):
-        return self.title
-
-    class Meta:
-        # custom permissions requested by the task
-        permissions = (
-            ('can_add_book', 'Can add book'),
-            ('can_change_book', 'Can change book'),
-            ('can_delete_book', 'Can delete book'),
-        )
-
-
-class Library(models.Model):
-    name = models.CharField(max_length=255)
-    books = models.ManyToManyField(Book, related_name='libraries', blank=True)
-
-    def __str__(self):
-        return self.name
-
-
-class Librarian(models.Model):
-    name = models.CharField(max_length=255)
-    library = models.OneToOneField(Library, on_delete=models.CASCADE, related_name='librarian')
-
-    def __str__(self):
-        return f"{self.name} ({self.library.name})"
-
-
-# -----------------------
-# UserProfile (RBAC)
-# -----------------------
-class UserProfile(models.Model):
-    ROLE_ADMIN = 'Admin'
-    ROLE_LIBRARIAN = 'Librarian'
-    ROLE_MEMBER = 'Member'
-
-    ROLE_CHOICES = [
-        (ROLE_ADMIN, 'Admin'),
-        (ROLE_LIBRARIAN, 'Librarian'),
-        (ROLE_MEMBER, 'Member'),
-    ]
-
-    # use settings.AUTH_USER_MODEL so relations point to the swapped user model
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='userprofile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
-
-    def __str__(self):
-        return f"{self.user.username} ({self.role})"
-
-
-# Signal: create UserProfile when a new User is created
-@receiver(post_save, sender=UserModel)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
+        return f"{self.title} by {self.author} ({self.publication_year})"
