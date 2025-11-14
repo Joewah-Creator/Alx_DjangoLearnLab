@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Book list</title></head>
+<body>
+  <h1>Books</h1>
+  <ul>
+  {% for book in books %}
+    <li>{{ book.title|escape }} by {{ book.author|escape }} ({{ book.publication_year }})</li>
+  {% empty %}
+    <li>No books.</li>
+  {% endfor %}
+  </ul>
+</body>
+</html>

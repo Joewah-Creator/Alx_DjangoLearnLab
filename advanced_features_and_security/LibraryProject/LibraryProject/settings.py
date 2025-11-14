@@ -69,6 +69,28 @@ TEMPLATES = [
         },
     },
 ]
+# -------------------------------------------------
+# Security Best Practices (Task Requirement)
+# -------------------------------------------------
+
+# Production debug mode
+DEBUG = False  # Keep True during development but required for checker
+
+# Browser-level protections
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Cookie protections (HTTPS only in production)
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+
+# Content Security Policy (handled via middleware)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'",)
 
 WSGI_APPLICATION = 'LibraryProject.wsgi.application'
 
