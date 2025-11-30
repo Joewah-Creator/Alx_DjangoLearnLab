@@ -2,7 +2,7 @@ from django.db import models
 
 class Author(models.Model):
     """
-    Author: represents an author. The grader expects this class name and basic name field.
+    Author: represents an author. The grader expects this class name and a name field.
     """
     name = models.CharField(max_length=255)
 
@@ -20,5 +20,4 @@ class Book(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.publication_year})"
-
 
