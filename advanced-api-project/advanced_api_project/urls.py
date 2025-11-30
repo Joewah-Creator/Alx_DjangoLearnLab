@@ -25,6 +25,8 @@ router.register(r'books', BookViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    # Optionally: path('api-auth/', include('rest_framework.urls')),
+    path('api/', include(router.urls)),          # viewsets (current)
+    path('api/generic/', include('api.urls')),  # generic views mounted under /api/generic/
+    # path('api-auth/', include('rest_framework.urls')),  # optional
 ]
+
