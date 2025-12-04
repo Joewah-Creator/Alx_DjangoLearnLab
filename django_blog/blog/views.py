@@ -1,31 +1,24 @@
 # blog/views.py
+from django.urls import reverse_lazy
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
 from .models import Post, Profile
-from .forms import RegisterForm, ProfileForm
+from .forms import RegisterForm, ProfileForm, PostForm
 
-# --- Blog views -------------------------------------------------------------
-def post_list(request):
-    """List all posts (most recent first)."""
-    posts = Post.objects.select_related('author').all().order_by('-published_date')
-    return render(request, 'blog/post_list.html', {'posts': posts})
-
-def post_detail(request, pk):
-    """Show a single post by primary key."""
-    post = get_object_or_404(Post, pk=pk)
-    return render(request, 'blog/post_detail.html', {'post': post})
-
-# --- Authentication / Profile views -----------------------------------------
+# ---------------------------
+# Authentication / Profile
+# ---------------------------
 def register(request):
-    """Register a new user and auto-login on success."""
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # log in immediately after registration
+            login(request, user)
             messages.success(request, "Registration successful. You are now logged in.")
             return redirect('blog:post_list')
         else:
@@ -36,8 +29,6 @@ def register(request):
 
 @login_required
 def profile_view(request):
-    """View and edit the current user's profile."""
-    # profile should be auto-created by the post_save signal in models.py
     profile, _ = Profile.objects.get_or_create(user=request.user)
     if request.method == 'POST':
         form = ProfileForm(request.POST, request.FILES, instance=profile)
@@ -50,5 +41,63 @@ def profile_view(request):
     else:
         form = ProfileForm(instance=profile)
     return render(request, 'blog/profile.html', {'form': form})
+
+# ---------------------------
+# Blog CRUD (class-based)
+# ---------------------------
+class PostListView(ListView):
+    model = Post
+    template_name = 'blog/post_list.html'  # reuse or point to blog/posts_list.html
+    context_object_name = 'posts'
+    paginate_by = 10
+    ordering = ['-published_date']
+
+class PostDetailView(DetailView):
+    model = Post
+    template_name = 'blog/post_detail.html'
+    context_object_name = 'post'
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/post_form.html'
+    # after creation go to detail view of the created post
+    def form_valid(self, form):
+        # set the author automatically
+        form.instance.author = self.request.user
+        response = super().form_valid(form)
+        messages.success(self.request, "Post created successfully.")
+        return response
+
+class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/post_form.html'
+
+    def test_func(self):
+        post = self.get_object()
+        return post.author == self.request.user
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You are not allowed to edit this post.")
+        return redirect('blog:post_detail', pk=self.get_object().pk)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Post updated successfully.")
+        return super().form_valid(form)
+
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Post
+    template_name = 'blog/post_confirm_delete.html'
+    success_url = reverse_lazy('blog:post_list')
+
+    def test_func(self):
+        post = self.get_object()
+        return post.author == self.request.user
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You are not allowed to delete this post.")
+        return redirect('blog:post_detail', pk=self.get_object().pk)
+
 
 
