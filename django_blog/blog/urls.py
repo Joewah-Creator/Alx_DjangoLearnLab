@@ -1,3 +1,4 @@
+# Alx_DjangoLearnLab/django_blog/blog/urls.py
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
@@ -14,13 +15,15 @@ urlpatterns = [
     path('post/<int:pk>/update/', views.PostUpdateView.as_view(), name='post_update'),
     path('post/<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
 
-    # Comments (checker required pattern: post/<int:pk>/comments/new/)
+    # Comments
     path('post/<int:pk>/comments/new/', views.CommentCreateView.as_view(), name='comment_create'),
     path('comment/<int:pk>/update/', views.CommentUpdateView.as_view(), name='comment_update'),
     path('comment/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='comment_delete'),
 
-    # Tags & search
-    path('tags/<str:tag_name>/', views.TagListView.as_view(), name='posts_by_tag'),
+    # Tags: required pattern and view
+    path('tags/<slug:tag_slug>/', views.PostByTagListView.as_view(), name='posts_by_tag'),
+
+    # Search
     path('search/', views.SearchResultsView.as_view(), name='search_results'),
 
     # Auth
@@ -29,4 +32,5 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='blog/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='blog/logged_out.html'), name='logout'),
 ]
+
 

@@ -165,3 +165,24 @@ class SearchResultsView(ListView):
             Q(tags__name__icontains=q)
         ).distinct().order_by('-published_date')
 
+class PostByTagListView(ListView):
+    """
+    Lists posts that have a tag matching the provided slug (tag_slug).
+    URL should provide <slug:tag_slug>.
+    """
+    model = Post
+    template_name = 'blog/tag_list.html'   # reuse existing tag_list template
+    context_object_name = 'posts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        tag_slug = self.kwargs.get('tag_slug')
+        if not tag_slug:
+            return Post.objects.none()
+        # taggit stores Tag.slug field; lookup via tags__slug
+        return Post.objects.filter(tags__slug__iexact=tag_slug).distinct().order_by('-published_date')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tag_slug'] = self.kwargs.get('tag_slug')
+        return ctx
