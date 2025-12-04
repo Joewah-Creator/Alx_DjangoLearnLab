@@ -1,0 +1,23 @@
+{% extends 'blog/base.html' %}
+{% load static %}
+{% block title %}Log in — Django Blog{% endblock %}
+
+{% block content %}
+  <h2>Log in</h2>
+  {% if form.errors %}
+    <p class="error">Your username and password didn't match. Please try again.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div>
+      <label for="id_username">Username</label><br>
+      <input type="text" name="username" autofocus required id="id_username">
+    </div>
+    <div>
+      <label for="id_password">Password</label><br>
+      <input type="password" name="password" required id="id_password">
+    </div>
+    <button type="submit">Log in</button>
+  </form>
+  <p>Don't have an account? <a href="{% url 'blog:register' %}">Register here</a></p>
+{% endblock %}
