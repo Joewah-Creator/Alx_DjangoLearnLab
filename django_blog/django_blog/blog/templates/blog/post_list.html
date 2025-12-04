@@ -1,0 +1,21 @@
+{% extends 'blog/base.html' %}
+{% load tz %}
+
+{% block title %}All Posts - Django Blog{% endblock %}
+
+{% block content %}
+  <h2>All Posts</h2>
+  {% if posts %}
+    <ul class="posts">
+      {% for post in posts %}
+        <li class="post-summary">
+          <h3><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h3>
+          <p class="meta">By {{ post.author.username }} — {{ post.published_date|date:"M d, Y H:i" }}</p>
+          <p>{{ post.content|truncatechars:200 }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No posts published yet.</p>
+  {% endif %}
+{% endblock %}
