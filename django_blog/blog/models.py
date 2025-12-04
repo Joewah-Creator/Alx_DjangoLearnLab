@@ -1,22 +1,18 @@
-# blog/models.py
+# Alx_DjangoLearnLab/django_blog/blog/models.py
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
 
-# import taggit manager
 from taggit.managers import TaggableManager
 
-# import taggit manager
-from taggit.managers import TaggableManager
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     published_date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    # use taggit's manager
     tags = TaggableManager(blank=True, related_name='posts')
 
     class Meta:
@@ -30,13 +26,18 @@ class Post(models.Model):
 
 
 class Profile(models.Model):
+    """
+    Minimal Profile model. Avatar stored as a CharField (URL/path) to avoid
+    requiring Pillow at import time. If you want file uploads, change this to
+    ImageField and install Pillow.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField(blank=True, null=True)
-    # keep avatar as simple CharField to avoid Pillow issues for now
     avatar = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Profile for {self.user.username}"
+
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
@@ -44,6 +45,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         Profile.objects.create(user=instance)
     else:
         Profile.objects.get_or_create(user=instance)
+
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
