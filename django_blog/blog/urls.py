@@ -1,4 +1,3 @@
-# blog/urls.py
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
@@ -6,21 +5,25 @@ from . import views
 app_name = 'blog'
 
 urlpatterns = [
-    # Read views
+    # Post read
     path('', views.PostListView.as_view(), name='post_list'),
     path('post/<int:pk>/', views.PostDetailView.as_view(), name='post_detail'),
 
-    # CRUD views (checker-required patterns)
+    # Post CRUD (checker required patterns)
     path('post/new/', views.PostCreateView.as_view(), name='post_create'),
     path('post/<int:pk>/update/', views.PostUpdateView.as_view(), name='post_update'),
     path('post/<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
 
-    # Comment routes (checker-required patterns)
+    # Comments (checker required pattern: post/<int:pk>/comments/new/)
     path('post/<int:pk>/comments/new/', views.CommentCreateView.as_view(), name='comment_create'),
     path('comment/<int:pk>/update/', views.CommentUpdateView.as_view(), name='comment_update'),
     path('comment/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='comment_delete'),
 
-    # Auth views
+    # Tags & search
+    path('tags/<str:tag_name>/', views.TagListView.as_view(), name='posts_by_tag'),
+    path('search/', views.SearchResultsView.as_view(), name='search_results'),
+
+    # Auth
     path('register/', views.register, name='register'),
     path('profile/', views.profile_view, name='profile'),
     path('login/', auth_views.LoginView.as_view(template_name='blog/login.html'), name='login'),

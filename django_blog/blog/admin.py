@@ -1,6 +1,5 @@
-# blog/admin.py
 from django.contrib import admin
-from .models import Post, Profile, Comment
+from .models import Post, Profile, Comment, Tag
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
@@ -17,6 +16,11 @@ class CommentAdmin(admin.ModelAdmin):
     list_display = ('post', 'author', 'created_at', 'updated_at')
     search_fields = ('content', 'author__username')
     list_filter = ('created_at', 'author')
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    search_fields = ('name',)
 
 
 

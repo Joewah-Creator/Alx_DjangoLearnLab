@@ -3,11 +3,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Profile, Post, Comment
+from .models import Profile, Post, Comment, Tag
 
-# ---------------------------------------------------------------------
-# User registration form
-# ---------------------------------------------------------------------
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True, help_text='Required. Provide a valid email address.')
 
@@ -22,9 +19,6 @@ class RegisterForm(UserCreationForm):
             user.save()
         return user
 
-# ---------------------------------------------------------------------
-# Profile form (edit profile)
-# ---------------------------------------------------------------------
 class ProfileForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True)
     email = forms.EmailField(required=True)
@@ -53,10 +47,13 @@ class ProfileForm(forms.ModelForm):
             profile.save()
         return profile
 
-# ---------------------------------------------------------------------
-# Post form (Create / Update)
-# ---------------------------------------------------------------------
 class PostForm(forms.ModelForm):
+    tags_field = forms.CharField(
+        required=False,
+        help_text='Add tags separated by commas (e.g. django,python,web)',
+        widget=forms.TextInput(attrs={'placeholder': 'tag1, tag2, tag3'})
+    )
+
     class Meta:
         model = Post
         fields = ['title', 'content']
@@ -65,15 +62,37 @@ class PostForm(forms.ModelForm):
             'content': forms.Textarea(attrs={'rows': 10, 'placeholder': 'Write your post here...'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            tag_names = ', '.join([t.name for t in self.instance.tags.all()])
+            self.fields['tags_field'].initial = tag_names
+
     def clean_title(self):
         title = self.cleaned_data.get('title', '').strip()
         if not title:
             raise forms.ValidationError("Title cannot be empty.")
         return title
 
-# ---------------------------------------------------------------------
-# Comment form (Create / Update)
-# ---------------------------------------------------------------------
+    def save(self, commit=True, author=None):
+        post = super().save(commit=False)
+        if author and not post.pk:
+            post.author = author
+        if commit:
+            post.save()
+            # handle tags
+            tags_raw = self.cleaned_data.get('tags_field', '')
+            names = [n.strip() for n in tags_raw.split(',') if n.strip()]
+            new_tags = []
+            for name in names:
+                tag = Tag.objects.filter(name__iexact=name).first()
+                if not tag:
+                    tag = Tag.objects.create(name=name)
+                new_tags.append(tag)
+            post.tags.set(new_tags)
+            post.save()
+        return post
+
 class CommentForm(forms.ModelForm):
     content = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Leave a comment...'}),
@@ -90,4 +109,3 @@ class CommentForm(forms.ModelForm):
         if not content:
             raise forms.ValidationError("Comment cannot be empty.")
         return content
-

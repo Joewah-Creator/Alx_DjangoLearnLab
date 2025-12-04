@@ -1,4 +1,3 @@
-# blog/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login
@@ -8,13 +7,12 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
+from django.db.models import Q
 
-from .models import Post, Profile, Comment
+from .models import Post, Profile, Comment, Tag
 from .forms import RegisterForm, ProfileForm, PostForm, CommentForm
 
-# ---------------------------
-# Authentication / Profile
-# ---------------------------
+# --- Auth / Profile views ---------------------------------------------------
 def register(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
@@ -44,9 +42,7 @@ def profile_view(request):
         form = ProfileForm(instance=profile)
     return render(request, 'blog/profile.html', {'form': form})
 
-# ---------------------------
-# Post CRUD (class-based)
-# ---------------------------
+# --- Post CRUD --------------------------------------------------------------
 class PostListView(ListView):
     model = Post
     template_name = 'blog/post_list.html'
@@ -62,7 +58,6 @@ class PostDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['comment_form'] = CommentForm()
-        # prefetch comments if you want; not required
         return context
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -71,10 +66,9 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     template_name = 'blog/post_form.html'
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
-        response = super().form_valid(form)
+        post = form.save(commit=True, author=self.request.user)
         messages.success(self.request, "Post created successfully.")
-        return response
+        return redirect(post.get_absolute_url())
 
 class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Post
@@ -85,13 +79,10 @@ class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         post = self.get_object()
         return post.author == self.request.user
 
-    def handle_no_permission(self):
-        messages.error(self.request, "You are not allowed to edit this post.")
-        return redirect('blog:post_detail', pk=self.get_object().pk)
-
     def form_valid(self, form):
+        post = form.save(commit=True)
         messages.success(self.request, "Post updated successfully.")
-        return super().form_valid(form)
+        return redirect(post.get_absolute_url())
 
 class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Post
@@ -102,20 +93,14 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         post = self.get_object()
         return post.author == self.request.user
 
-    def handle_no_permission(self):
-        messages.error(self.request, "You are not allowed to delete this post.")
-        return redirect('blog:post_detail', pk=self.get_object().pk)
-
-# ---------------------------
-# Comment CRUD
-# ---------------------------
+# --- Comments ---------------------------------------------------------------
 class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
-    template_name = 'blog/comment_form.html'  # optional standalone form
+    template_name = 'blog/comment_form.html'  # optional
 
     def form_valid(self, form):
-        post_pk = self.kwargs.get('post_pk')
+        post_pk = self.kwargs.get('pk')  # matches URL: post/<int:pk>/comments/new/
         form.instance.author = self.request.user
         form.instance.post_id = post_pk
         response = super().form_valid(form)
@@ -134,9 +119,6 @@ class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         comment = self.get_object()
         return comment.author == self.request.user
 
-    def handle_no_permission(self):
-        return redirect('blog:post_detail', pk=self.get_object().post.pk)
-
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'pk': self.object.post.pk})
 
@@ -148,8 +130,38 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         comment = self.get_object()
         return comment.author == self.request.user
 
-    def handle_no_permission(self):
-        return redirect('blog:post_detail', pk=self.get_object().post.pk)
-
     def get_success_url(self):
         return reverse_lazy('blog:post_detail', kwargs={'pk': self.object.post.pk})
+
+# --- Tag & Search Views ----------------------------------------------------
+class TagListView(ListView):
+    model = Post
+    template_name = 'blog/tag_list.html'
+    context_object_name = 'posts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        tag_name = self.kwargs.get('tag_name')
+        return Post.objects.filter(tags__name__iexact=tag_name).distinct().order_by('-published_date')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tag_name'] = self.kwargs.get('tag_name')
+        return ctx
+
+class SearchResultsView(ListView):
+    model = Post
+    template_name = 'blog/search_results.html'
+    context_object_name = 'posts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        q = self.request.GET.get('q', '').strip()
+        if not q:
+            return Post.objects.none()
+        return Post.objects.filter(
+            Q(title__icontains=q) |
+            Q(content__icontains=q) |
+            Q(tags__name__icontains=q)
+        ).distinct().order_by('-published_date')
+

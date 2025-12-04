@@ -1,11 +1,18 @@
-{# blog/templates/blog/post_detail.html #}
 {% extends "blog/base.html" %}
 {% block title %}{{ post.title }}{% endblock %}
-
 {% block content %}
   <article class="post">
     <h2>{{ post.title }}</h2>
     <p class="meta">By {{ post.author.username }} — {{ post.published_date|date:"M d, Y H:i" }}</p>
+
+    {% if post.tags.exists %}
+      <p>Tags:
+        {% for tag in post.tags.all %}
+          <a href="{% url 'blog:posts_by_tag' tag.name %}">{{ tag.name }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+    {% endif %}
+
     <div class="post-content">
       {{ post.content|linebreaks }}
     </div>

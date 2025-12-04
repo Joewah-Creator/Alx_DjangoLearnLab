@@ -4,20 +4,45 @@
   <meta charset="utf-8">
   <title>{% block title %}Django Blog{% endblock %}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  {% load static %}
   <link rel="stylesheet" href="{% static 'blog/css/styles.css' %}">
 </head>
 <body>
   <header>
     <div class="container">
       <h1><a href="{% url 'blog:post_list' %}">Django Blog</a></h1>
+
+      <form action="{% url 'blog:search_results' %}" method="get" style="display:inline;">
+        <input type="text" name="q" placeholder="Search posts..." value="{{ request.GET.q|default:'' }}">
+        <button type="submit">Search</button>
+      </form>
+
+      <nav>
+        {% if user.is_authenticated %}
+          <a href="{% url 'blog:profile' %}">Profile</a> |
+          <a href="{% url 'blog:logout' %}">Logout</a>
+        {% else %}
+          <a href="{% url 'blog:login' %}">Login</a> |
+          <a href="{% url 'blog:register' %}">Register</a>
+        {% endif %}
+      </nav>
     </div>
   </header>
+
   <main class="container">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="message {{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
+
   <footer>
     <div class="container">
-      <p>&copy; {{ timezone.now.year }} Django Blog</p>
+      <p>&copy; Django Blog</p>
     </div>
   </footer>
 </body>
