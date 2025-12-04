@@ -1,5 +1,6 @@
 # blog/forms.py
 from django import forms
+from .models import Post, Tag  
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
@@ -64,6 +65,7 @@ class PostForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # prefill tags_field using taggit's tags list
         if self.instance and self.instance.pk:
             tag_names = ', '.join([t.name for t in self.instance.tags.all()])
             self.fields['tags_field'].initial = tag_names
@@ -75,21 +77,20 @@ class PostForm(forms.ModelForm):
         return title
 
     def save(self, commit=True, author=None):
+        """
+        Save post and assign tags using django-taggit.
+        Pass author when creating a new Post (CreateView will supply it).
+        """
         post = super().save(commit=False)
         if author and not post.pk:
             post.author = author
         if commit:
             post.save()
-            # handle tags
+            # tags_field is comma separated, assign to taggit
             tags_raw = self.cleaned_data.get('tags_field', '')
             names = [n.strip() for n in tags_raw.split(',') if n.strip()]
-            new_tags = []
-            for name in names:
-                tag = Tag.objects.filter(name__iexact=name).first()
-                if not tag:
-                    tag = Tag.objects.create(name=name)
-                new_tags.append(tag)
-            post.tags.set(new_tags)
+            # taggit supports setting a list of tag names:
+            post.tags.set(*[names]) if False else post.tags.set(names)
             post.save()
         return post
 
